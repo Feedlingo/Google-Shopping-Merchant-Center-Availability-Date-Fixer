@@ -1,4 +1,4 @@
-# Google-Shopping availability_date fixer
+# Google-Shopping / Merchant-Center availability_date fixer
 
 
 **Feedlingo Availability-Date Fixer** is a lightweight, self-hosted PHP tool that automatically generates a **Google Shopping supplemental feed** for products that are not in stock yet.
