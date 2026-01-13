@@ -10,6 +10,13 @@ availability_date = today + N days (UTC)
 ```
 
 You keep full control over the offset (e.g. 5, 10, 30 days) while still providing a valid date to Google.
+---
+
+## Screenshot
+
+The screenshot below shows the web-based configuration UI, including source feed selection, supplemental feed target, availability date offset and cronjob setup.
+
+![Feedlingo Availability-Date Fixer – Configuration UI](docs/availability-date-fixer-backend.png)
 
 ---
 
