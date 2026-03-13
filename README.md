@@ -1,4 +1,5 @@
 # Free Google Merchant Center Availability Date Fixer
+Free PHP tool that generates Google Merchant Center supplemental feeds with automatic availability_date values for Google Shopping product feeds.
 
 ## Download
 
@@ -11,7 +12,7 @@ The official download and documentation are hosted on Feedlingo:
 [https://feedlingo.de](https://www.feedlingo.de/?lang=en)
 
 
-# Google-Shopping / Merchant-Center availability_date fixer
+## Google-Shopping / Merchant-Center availability_date fixer
 
 
 **Feedlingo Availability-Date Fixer** is a lightweight, self-hosted PHP tool that automatically generates a **Google Shopping supplemental feed** for products that are not in stock yet.
