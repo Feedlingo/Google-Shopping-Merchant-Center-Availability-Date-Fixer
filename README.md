@@ -2,11 +2,11 @@
 
 👉 Official project page and download:
 
-https://feedlingo.de/google-shopping-availability-date-fixer
+[https://feedlingo.de/google-shopping-availability-date-fixer](https://www.feedlingo.de/google-shopping-merchant-center-availability-date-fixer/?lang=en)
 
 The official download and documentation are hosted on Feedlingo:
 
-https://feedlingo.de
+[https://feedlingo.de](https://www.feedlingo.de/?lang=en)
 
 
 # Google-Shopping / Merchant-Center availability_date fixer
