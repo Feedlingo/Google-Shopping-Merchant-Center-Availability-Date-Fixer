@@ -308,8 +308,13 @@ function feedlingo_generate_availability_feed($config, $nsG)
             continue;
         }
 
-        // Skip "in stock" items
-        if ($availability === 'in stock' || $availability === 'instock') {
+        // Skip products that should not be present in the supplemental feed
+        if (
+            $availability === 'in stock' ||
+            $availability === 'instock' ||
+            $availability === 'out of stock' ||
+            $availability === 'outofstock'
+        ) {
             continue;
         }
 
@@ -330,6 +335,57 @@ function feedlingo_generate_availability_feed($config, $nsG)
     $dom->save($targetFeed);
 
     return "OK (" . $mode . "): " . $count . " products → " . $targetFeed . " (availability_date = " . $dateStr . ")";
+}
+
+
+/* -------------------------------------------------
+   Public URL detection (best effort)
+--------------------------------------------------*/
+
+function feedlingo_normalize_path_for_compare($path)
+{
+    $path = str_replace('\\', '/', (string)$path);
+    return rtrim($path, '/');
+}
+
+function feedlingo_detect_public_file_url($absoluteTargetPath)
+{
+    if ($absoluteTargetPath === '') {
+        return '';
+    }
+
+    $targetPath = feedlingo_normalize_path_for_compare($absoluteTargetPath);
+    $scriptPath = isset($_SERVER['SCRIPT_FILENAME'])
+        ? feedlingo_normalize_path_for_compare($_SERVER['SCRIPT_FILENAME'])
+        : feedlingo_normalize_path_for_compare(__FILE__);
+
+    $scriptDir = feedlingo_normalize_path_for_compare(dirname($scriptPath));
+    $scheme    = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+    $host      = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
+    $uriPath   = isset($_SERVER['SCRIPT_NAME']) ? str_replace('\\', '/', $_SERVER['SCRIPT_NAME']) : '';
+    $baseUrl   = $host !== '' ? $scheme . $host : '';
+
+    if ($baseUrl === '') {
+        return '';
+    }
+
+    // Case 1: target file is inside DOCUMENT_ROOT
+    if (!empty($_SERVER['DOCUMENT_ROOT'])) {
+        $docRoot = feedlingo_normalize_path_for_compare($_SERVER['DOCUMENT_ROOT']);
+        if ($docRoot !== '' && strpos($targetPath, $docRoot . '/') === 0) {
+            $relative = substr($targetPath, strlen($docRoot));
+            return $baseUrl . str_replace('%2F', '/', rawurlencode(str_replace('\\', '/', $relative)));
+        }
+    }
+
+    // Case 2: target file sits inside the same public directory tree as this script
+    if ($scriptDir !== '' && strpos($targetPath, $scriptDir . '/') === 0 && $uriPath !== '') {
+        $scriptWebDir = rtrim(str_replace('\\', '/', dirname($uriPath)), '/');
+        $relative     = substr($targetPath, strlen($scriptDir));
+        return $baseUrl . ($scriptWebDir === '' ? '' : $scriptWebDir) . str_replace('%2F', '/', rawurlencode(str_replace('\\', '/', $relative)));
+    }
+
+    return '';
 }
 
 /* -------------------------------------------------
@@ -390,7 +446,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Build cron URL for display
 $scheme  = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https://' : 'http://';
 $toolUrl = $scheme . $_SERVER['HTTP_HOST'] . strtok($_SERVER['REQUEST_URI'], '?');
-$cronUrl = $toolUrl . '?run=1&secret=' . urlencode($config['cronSecret']);
+$cronUrl       = $toolUrl . '?run=1&secret=' . urlencode($config['cronSecret']);
+$publicFeedUrl = feedlingo_detect_public_file_url($config['targetFeed']);
 
 ?>
 <!DOCTYPE html>
@@ -584,7 +641,7 @@ $cronUrl = $toolUrl . '?run=1&secret=' . urlencode($config['cronSecret']);
 <div class="app">
     <header class="topbar">
         <div class="brand-block">
-            <div class="brand-name">Feedlingo&nbsp;Pro</div>
+            <div class="brand-name">Feedlingo</div>
             <div class="brand-subline">
                 Google Shopping <strong>availability_date</strong> fixer
             </div>
@@ -616,8 +673,8 @@ $cronUrl = $toolUrl . '?run=1&secret=' . urlencode($config['cronSecret']);
 
             <p class="muted-block">
                 The tool reads your source feed as XML first. If that fails, it tries CSV.<br>
-                Products with <code>in stock</code> availability are skipped completely.<br>
-                Only products with <code>preorder</code> or <code>backorder</code> (or any non-empty, non-in-stock value)
+                Products with <code>in stock</code> or <code>out of stock</code> availability are skipped completely.<br>
+                Only products such as <code>preorder</code> or <code>backorder</code> (or any other non-empty value except in-stock / out-of-stock)
                 will appear in the supplemental feed – which is where <code>availability_date</code> is mandatory.
             </p>
         </section>
@@ -646,7 +703,21 @@ $cronUrl = $toolUrl . '?run=1&secret=' . urlencode($config['cronSecret']);
                        value="<?php echo htmlspecialchars($config['targetFeed'], ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="help">
                     This file will be created/overwritten and used as a supplemental feed in Google Merchant Center.
+                    The absolute path is fine for server-side writing; below you may also see a detected public URL for Merchant Center.
                 </div>
+
+                <label style="margin-top:12px;">Detected public feed URL</label>
+                <?php if (!empty($publicFeedUrl)) : ?>
+                    <div class="cron-box"><?php echo htmlspecialchars($publicFeedUrl, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="help">
+                        You can usually enter this URL directly as a scheduled fetch URL in Google Merchant Center.
+                    </div>
+                <?php else : ?>
+                    <div class="cron-box">Could not determine a public URL automatically for the current target path.</div>
+                    <div class="help">
+                        This can happen if the target file is outside the web-accessible directory tree. In that case, choose a web-accessible target path or provide the URL manually.
+                    </div>
+                <?php endif; ?>
 
                 <label for="daysOffset">Availability date offset (days)</label>
                 <input type="number" id="daysOffset" name="daysOffset" min="0" max="365"
